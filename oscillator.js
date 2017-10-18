@@ -1,4 +1,6 @@
 (function() {
+  const waveTypes = ['Sine', 'Square', 'Sawtooth', 'Triangle'];
+
   class JSOscillator extends HTMLElement {
     constructor() {
       super();
@@ -8,16 +10,8 @@
       this._root = this.attachShadow({mode: 'open'});
       this._audioContext = AudioContext && new AudioContext();
       this._osc = this._audioContext.createOscillator();
-      this._minFreq = Number(this.getAttribute('min') || -5000);
-      this._maxFreq = Number(this.getAttribute('max') || 5000);
-      this._startFreq = Number(this.getAttribute('start') || 440);
-      this._waveType = this.getAttribute('type') || 'sine';
-      if (this._startFreq < this._minFreq || this._startFreq > this._maxFreq) {
-        this._startFreq = this._minFreq;
-      }
-      this._osc.type = this._waveType;
-      this._osc.start(0);
-      this._osc.detune.value = this._startFreq;
+      this._minFreq = Number(this.getAttribute('min')) || -5000;
+      this._maxFreq = Number(this.getAttribute('max')) || 5000;
       const _styles =
         `<style>
           :host {
@@ -42,17 +36,16 @@
             width: 50%;
           }
         </style>`;
-      const waveTypes = ['Sine', 'Square', 'Sawtooth', 'Triangle'];
       const _template =
         `<section>
-          <input type="number" id="numFreq" min="${this._minFreq}" max="${this._maxFreq}" value="${this._startFreq}">
+          <input type="number" id="numFreq" min="${this._minFreq}" max="${this._maxFreq}" value="${this.frequency}">
           <button id="btnSetFreq">Set</button>
         </section>
         <section>
-          <input type="range" id="rngFreq" min="${this._minFreq}" max="${this._maxFreq}" value="${this._startFreq}">
+          <input type="range" id="rngFreq" min="${this._minFreq}" max="${this._maxFreq}" value="${this.frequency}">
         </section>
         <section>
-          ${waveTypes.map(w => '<button id="btn' + w + '"' + (w.toLowerCase() === this._waveType ? ' disabled' : null) + '>' + w + '</button>').join('')}
+          ${waveTypes.map(w => '<button id="btn' + w + '">' + w + '</button>').join('')}
         </section>
         <section id="buttons">
           <button id="btnStart">Start</button>
@@ -60,47 +53,75 @@
         </section>`;
 
       this._root.innerHTML = _styles + _template;
-      this._typeButtons = waveTypes.map(w => this._root.querySelector('#btn' + w));
-
-      const numFreq = this._root.querySelector('#numFreq');
-      const rngFreq = this._root.querySelector('#rngFreq');
+      this._numFreq = this._root.querySelector('#numFreq');
+      this._rngFreq = this._root.querySelector('#rngFreq');
+      this.frequency = Number(this.getAttribute('start')) || 440;
+      if (this.frequency < this._minFreq || this.frequency > this._maxFreq) {
+        this.frequency = this._minFreq;
+      }
+      this.type = this.getAttribute('type') || 'sine';
+      this._osc.start(0);
 
       let id;
       this.addEventListener('click', e => {
         id = e.path[0].id;
         switch (id) {
         case 'btnSetFreq':
-          this._osc.detune.value = +numFreq.value;
-          rngFreq.value = +numFreq.value;
+          this.frequency = +this._numFreq.value;
           break;
         case 'btnSine':
         case 'btnSquare':
         case 'btnSawtooth':
         case 'btnTriangle':
-          this._selectWaveType(id.split('btn')[1]);
+          this.type = id.split('btn')[1];
           break;
         case 'btnStart':
-          this._osc.connect(this._audioContext.destination);
+          this.play();
           break;
         case 'btnStop':
-          this._osc.disconnect();
+          this.stop();
           break;
         default:
           // Do nothing
         }
       });
 
-      rngFreq.addEventListener('input', e => {
-        this._osc.detune.value = rngFreq.value;
-        numFreq.value = rngFreq.value;
+      this._rngFreq.addEventListener('input', e => {
+        this.frequency = this._rngFreq.value;
       });
     }
 
-    _selectWaveType(type) {
-      this._osc.type = type.toLowerCase();
+    get frequency () {
+      return this._osc.detune.value;
+    }
+
+    set frequency (freq) {
+      this._osc.detune.value = freq;
+      this._numFreq.value = freq;
+      this._rngFreq.value = freq;
+    }
+
+    get type () {
+      return this._osc.type;
+    }
+
+    set type (type) {
+      const waveType = type.toLowerCase();
+      if (typeof this._typeButtons === 'undefined') {
+        this._typeButtons = waveTypes.map(w => this._root.querySelector('#btn' + w));
+      }
+      this._osc.type = waveType;
       this._typeButtons.map(b => {
-        b.disabled = b.id === 'btn' + type;
+        b.disabled = b.id.toLowerCase() === 'btn' + waveType;
       });
+    }
+
+    play() {
+      this._osc.connect(this._audioContext.destination);
+    }
+
+    stop() {
+      this._osc.disconnect();
     }
   }
 

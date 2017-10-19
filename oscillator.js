@@ -91,21 +91,21 @@
       });
     }
 
-    get frequency () {
+    get frequency() {
       return this._osc.detune.value;
     }
 
-    set frequency (freq) {
+    set frequency(freq) {
       this._osc.detune.value = freq;
       this._numFreq.value = freq;
       this._rngFreq.value = freq;
     }
 
-    get type () {
+    get type() {
       return this._osc.type;
     }
 
-    set type (type) {
+    set type(type) {
       const waveType = type.toLowerCase();
       if (typeof this._typeButtons === 'undefined') {
         this._typeButtons = waveTypes.map(w => this._root.querySelector('#btn' + w));
